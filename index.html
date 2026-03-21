@@ -51,6 +51,16 @@ function iStyle(v){
 }
 var BS={border:"1px solid "+P.border,borderRadius:7,padding:"6px 10px",fontSize:11,fontWeight:700,cursor:"pointer",background:P.inner,color:P.sub};
 
+// 작은 입력 박스 (그리드용)
+function SmallInput(p){
+  var e=p.val===""||p.val==null;
+  return React.createElement("div",null,
+    React.createElement("div",{style:{fontSize:9,color:P.muted,fontWeight:700,marginBottom:2}},p.label+(p.unit?" ("+p.unit+")":"")),
+    React.createElement("input",{type:"number",value:p.val,onChange:function(ev){p.onChange(ev.target.value);},
+      className:e?"empty":"",style:iStyle(p.val)})
+  );
+}
+
 function TR(p){
   if(p.isHeader)return React.createElement("tr",null,
     React.createElement("td",{colSpan:2,style:{padding:"5px 8px",fontSize:10,fontWeight:700,
@@ -74,91 +84,50 @@ function OvertimeChart(p){
   var ref=useRef(null);
   var ch=useRef(null);
   var data=p.data||[];
-
   useEffect(function(){
     if(!ref.current)return;
     if(ch.current){ch.current.destroy();ch.current=null;}
     if(data.length===0)return;
-
     var labels=data.map(function(r){return r[0];});
     var overtime=data.map(function(r){return toN(r[4]);});
     var productivity=data.map(function(r){return toN(r[3]);});
-
     var totalH=Math.round(overtime.reduce(function(a,b){return a+b;},0)*10)/10;
     var days=overtime.filter(function(v){return v>0;}).length;
     var avg=days>0?Math.round(totalH/days*10)/10:0;
     if(p.onStats)p.onStats({total:totalH,days:days,avg:avg});
-
     ch.current=new Chart(ref.current,{
       type:"bar",
-      data:{
-        labels:labels,
-        datasets:[
-          {
-            type:"bar",
-            label:"연장시간",
-            data:overtime,
-            backgroundColor:overtime.map(function(v){return v>0?"#fbbf24bb":"#3f3f4688";}),
-            borderColor:overtime.map(function(v){return v>0?"#fbbf24":"#52525b";}),
-            borderWidth:2,borderRadius:4,
-            yAxisID:"y1",
-            datalabels:{
-              color:overtime.map(function(v){return v>0?"#18181b":"transparent";}),
-              font:{size:11,weight:"bold"},
-              anchor:"center",align:"center",
-              formatter:function(v){return v>0?v+"h":"";}
-            }
-          },
-          {
-            type:"line",
-            label:"달성 생산성",
-            data:productivity,
-            borderColor:"#60a5fa",
-            backgroundColor:"transparent",
-            borderWidth:2,
-            pointRadius:4,
-            pointBackgroundColor:"#60a5fa",
-            tension:0.3,
-            yAxisID:"y2",
-            datalabels:{
-              color:"#93c5fd",
-              font:{size:10,weight:"bold"},
-              anchor:"end",align:"top",offset:2,
-              formatter:function(v){return v>0?fmtD(v):"";}
-            }
-          }
-        ]
-      },
-      options:{
-        responsive:true,maintainAspectRatio:false,
+      data:{labels:labels,datasets:[
+        {type:"bar",label:"연장시간",data:overtime,
+          backgroundColor:overtime.map(function(v){return v>0?"#fbbf24bb":"#3f3f4688";}),
+          borderColor:overtime.map(function(v){return v>0?"#fbbf24":"#52525b";}),
+          borderWidth:2,borderRadius:4,yAxisID:"y1",
+          datalabels:{color:overtime.map(function(v){return v>0?"#18181b":"transparent";}),
+            font:{size:11,weight:"bold"},anchor:"center",align:"center",
+            formatter:function(v){return v>0?v+"h":"";}}},
+        {type:"line",label:"달성 생산성",data:productivity,
+          borderColor:"#60a5fa",backgroundColor:"transparent",
+          borderWidth:2,pointRadius:4,pointBackgroundColor:"#60a5fa",tension:0.3,yAxisID:"y2",
+          datalabels:{color:"#93c5fd",font:{size:10,weight:"bold"},anchor:"end",align:"top",offset:2,
+            formatter:function(v){return v>0?fmtD(v):"";}}}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
         interaction:{mode:"index",intersect:false},
-        plugins:{
-          legend:{display:false},
-          tooltip:{backgroundColor:"#27272a",titleColor:"#fdf6e3",bodyColor:"#d4c9a8",borderColor:"#52525b",borderWidth:1}
-        },
+        plugins:{legend:{display:false},
+          tooltip:{backgroundColor:"#27272a",titleColor:"#fdf6e3",bodyColor:"#d4c9a8",borderColor:"#52525b",borderWidth:1}},
         scales:{
           x:{ticks:{color:"#d4c9a8",font:{size:11,weight:"bold"}},grid:{color:"#3f3f46"}},
-          y1:{
-            position:"left",min:0,max:35,
+          y1:{position:"left",min:0,max:35,
             ticks:{color:"#fbbf24",font:{size:11},callback:function(v){return v+"h";}},
-            grid:{color:"#3f3f46"},
-            title:{display:true,text:"연장 (h)",color:"#fbbf24",font:{size:10}}
-          },
-          y2:{
-            position:"right",min:0,max:30,
-            ticks:{color:"#60a5fa",font:{size:11}},
-            grid:{drawOnChartArea:false},
-            title:{display:true,text:"생산성 (건/h)",color:"#60a5fa",font:{size:10}}
-          }
-        }
-      }
+            grid:{color:"#3f3f46"},title:{display:true,text:"연장 (h)",color:"#fbbf24",font:{size:10}}},
+          y2:{position:"right",min:0,max:30,
+            ticks:{color:"#60a5fa",font:{size:11}},grid:{drawOnChartArea:false},
+            title:{display:true,text:"생산성 (건/h)",color:"#60a5fa",font:{size:10}}}
+        }}
     });
     return function(){if(ch.current){ch.current.destroy();ch.current=null;}};
   },[data]);
-
-  if(data.length===0){
-    return React.createElement("div",{style:{textAlign:"center",color:P.muted,fontSize:12,fontWeight:700,padding:"16px 0"}},"저장된 실적이 없어요.");
-  }
+  if(data.length===0)return React.createElement("div",{style:{textAlign:"center",color:P.muted,fontSize:12,fontWeight:700,padding:"16px 0"}},"저장된 실적이 없어요.");
   return React.createElement("div",{style:{position:"relative",height:"140px"}},React.createElement("canvas",{ref:ref}));
 }
 
@@ -168,22 +137,25 @@ function App(){
   r=_("");var goal=r[0],setGoal=r[1];
   r=_("");var nGoal=r[0],setNGoal=r[1];
   r=_("");var prev=r[0],setPrev=r[1];
-  r=_("");var nPW=r[0],setNPW=r[1];
-  r=_("");var nIW=r[0],setNIW=r[1];
-  r=_("");var nH=r[0],setNH=r[1];
-  r=_("");var nPP=r[0],setNPP=r[1];
-  r=_("");var sW=r[0],setSW=r[1];
-  r=_("");var sPP=r[0],setSPP=r[1];
-  r=_("");var ach=r[0],setAch=r[1];
+  // 00~06 입력
+  r=_("");var nPW=r[0],setNPW=r[1];   // 생산인력
+  r=_("");var nIW=r[0],setNIW=r[1];   // 간접인력
+  r=_("");var nH=r[0],setNH=r[1];     // 근무시간
+  r=_("");var nPP=r[0],setNPP=r[1];   // 목표생산성
+  r=_("");var sW=r[0],setSW=r[1];     // 지원인력
+  r=_("");var sPP=r[0],setSPP=r[1];   // 지원 목표생산성
+  r=_("");var ach=r[0],setAch=r[1];   // 실제 달성수량
+  // 추가근무 탭
   r=_(null);var extMode=r[0],setExtMode=r[1];
-  r=_("");var ePW=r[0],setEPW=r[1];
-  r=_("");var eIW=r[0],setEIW=r[1];
-  r=_("");var eH=r[0],setEH=r[1];
-  r=_("");var ePP=r[0],setEPP=r[1];
-  r=_("");var extWorkers=r[0],setExtWorkers=r[1];
-  r=_("");var extSW=r[0],setExtSW=r[1];   // 추가탭 지원인력 인원
-  r=_("");var extSH=r[0],setExtSH=r[1];   // 추가탭 지원인력 시간
-  r=_("");var extSPP=r[0],setExtSPP=r[1]; // 추가탭 지원인력 생산성
+  r=_("");var ePW=r[0],setEPW=r[1];         // 추가 생산인력
+  r=_("");var eIW=r[0],setEIW=r[1];         // 추가 간접인력
+  r=_("");var eH=r[0],setEH=r[1];           // 추가 근무시간
+  r=_("");var ePP=r[0],setEPP=r[1];         // 추가 목표생산성
+  r=_("");var extWorkers=r[0],setExtWorkers=r[1]; // 연장 참여인원
+  r=_("");var extSW=r[0],setExtSW=r[1];     // 추가 지원인력 인원
+  r=_("");var extSH=r[0],setExtSH=r[1];     // 추가 지원인력 시간
+  r=_("");var extSPP=r[0],setExtSPP=r[1];   // 추가 지원인력 생산성
+  // 상태
   r=_("idle");var saveStatus=r[0],setSaveStatus=r[1];
   r=_([]);var history=r[0],setHistory=r[1];
   r=_("loading");var loadStatus=r[0],setLoadStatus=r[1];
@@ -192,34 +164,38 @@ function App(){
 
   var c=useMemo(function(){
     var pw=toN(nPW),iw=toN(nIW),sw=toN(sW),h=toN(nH),pp=toN(nPP),sp=toN(sPP);
-    var nPred=pw*h*pp,sPred=sw*h*sp,totPred=nPred+sPred;
+    // 00~06 예측: 생산인력만 × 시간 × 생산성
+    var nPred=pw*h*pp;
+    // 지원인력 예측: 지원인력 × 시간 × 생산성
+    var sPred=sw*h*sp;
+    var totPred=nPred+sPred;
+    // 추가근무
     var epw=toN(ePW),eiw=toN(eIW),eh=toN(eH),epp=toN(ePP);
+    // 추가 생산인력 예측: 생산인력만 (간접 제외)
+    var extProd=extMode?epw*eh*epp:0;
+    // 추가 지원인력 예측
     var extSupportPred=extMode?toN(extSW)*toN(extSH)*toN(extSPP):0;
-    // 예측처리량: 생산인력만 × 시간 × 생산성
-    var extPred=extMode?epw*eh*epp:0;
-    var extPredTotal=extPred+extSupportPred;
-    var extTotal=epw+eiw; // 투입인력: 생산+간접
-    // 연장시간: (총근무시간-8.5) × 연장참여인원
-    var totalH=toN(nH)+eh;
-    var ew=toN(extWorkers);
-    var overtimeH=extMode==='overtime'&&totalH>8.5&&ew>0?Math.round((totalH-8.5)*ew*10)/10:0;
+    var extPredTotal=extProd+extSupportPred;
     var achNum=toNO(ach);
     var tf=(achNum||0)+extPredTotal;
     var ng=toNO(nGoal);
-    var nightTotal=pw+iw+sw,extTotal=epw+eiw;
+    // 투입인력: 생산+간접 합산
+    var nightTotal=pw+iw+sw;
+    var extTotal=epw+eiw;
     var denom=(pw+sw)*h;
     var achPP=(achNum!==null&&denom>0)?achNum/denom:null;
     var nightRatio=ng&&ng>0&&tf>0?tf/ng:null;
     var remain=toN(goal)-toN(prev)-tf;
-    var totalH=toN(nH)+eh;
+    // 연장시간: (00~06 + 추가 근무시간 - 8.5h) × 연장참여인원
+    var totalH=h+eh;
     var ew=toN(extWorkers);
     var overtimeH=extMode==='overtime'&&totalH>8.5&&ew>0?Math.round((totalH-8.5)*ew*10)/10:0;
-    return{nPred:nPred,sPred:sPred,totPred:totPred,extPred:extPred,
+    return{nPred:nPred,sPred:sPred,totPred:totPred,
+      extProd:extProd,extSupportPred:extSupportPred,extPredTotal:extPredTotal,
       ng:ng,nightTotal:nightTotal,nightTotalH:nightTotal*h,
       extTotal:extTotal,extTotalH:extTotal*eh,
-      extSupportPred:extSupportPred,extPredTotal:extPredTotal,
       achNum:achNum,achPP:achPP,tf:tf,nightRatio:nightRatio,remain:remain,overtimeH:overtimeH};
-  },[nPW,nIW,nH,nPP,sW,sPP,ach,ePW,eIW,eH,ePP,extMode,goal,nGoal,prev,extWorkers]);
+  },[nPW,nIW,nH,nPP,sW,sPP,ach,ePW,eIW,eH,ePP,extWorkers,extSW,extSH,extSPP,extMode,goal,nGoal,prev]);
 
   useEffect(function(){
     fetch(GAS_URL).then(function(res){return res.json();})
@@ -232,13 +208,10 @@ function App(){
     setSaveStatus("saving");
     var payload={
       date:fmtDate(opDate)+"("+getDayStr(opDate)+")",
-      total:fmt(toN(goal)),
-      night:fmt(c.tf),
+      total:fmt(toN(goal)),night:fmt(c.tf),
       productivity:c.achPP!==null?fmtD(c.achPP):"0",
       overtime:c.overtimeH,
-      prodWorkers:toN(nPW),
-      supportWorkers:toN(sW),
-      indirectWorkers:toN(nIW),
+      prodWorkers:toN(nPW),supportWorkers:toN(sW),indirectWorkers:toN(nIW),
       totalHours:fmtD(toN(nH)+toN(eH)),
       nightRatio:toN(goal)>0?fmtD(c.tf/toN(goal)*100)+"%":"0%",
     };
@@ -269,6 +242,7 @@ function App(){
         // 대시보드
         React.createElement("div",{style:{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:6}},
 
+          // 헤더
           React.createElement("div",{style:{...card(),display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px"}},
             React.createElement("div",null,
               React.createElement("div",{style:{fontSize:9,color:P.muted,letterSpacing:2,textTransform:"uppercase",fontWeight:700}},"Night Operations"),
@@ -280,6 +254,7 @@ function App(){
               style:{...iStyle(opDate),width:"auto",fontSize:12,color:P.sub,padding:"4px 8px"}})
           ),
 
+          // 목표 3칸
           React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}},
             [{label:"총 출고 목표물량",val:goal?fmt(toN(goal))+" 건":null},
              {label:"야간 목표물량",val:nGoal?fmt(toN(nGoal))+" 건":null},
@@ -292,6 +267,7 @@ function App(){
             })
           ),
 
+          // 야간 예측 + 달성
           React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}},
             React.createElement("div",{style:card()},
               React.createElement("div",{style:{fontSize:10,color:P.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}},"야간 예측 처리량"),
@@ -337,6 +313,7 @@ function App(){
             )
           ),
 
+          // 처리량 합계
           React.createElement("div",{style:{...card(),border:"1px solid "+P.totalBorder}},
             React.createElement("div",{style:{fontSize:10,color:P.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}},"처리량 합계"),
             React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}},
@@ -358,6 +335,7 @@ function App(){
             )
           ),
 
+          // 주간 인계 잔여량
           React.createElement("div",{style:{background:rBg,borderRadius:10,padding:"10px 12px",border:"1px solid "+rBorder}},
             React.createElement("div",{style:{fontSize:10,color:P.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}},"주간 인계 잔여량"),
             React.createElement("div",{style:{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:hasAll?8:0}},
@@ -379,6 +357,7 @@ function App(){
             ):null
           ),
 
+          // 그래프
           showGraph?React.createElement("div",{style:card()},
             React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:8}},
               [{label:"누적 연장",val:stats.total>0?stats.total+"h":null},
@@ -405,11 +384,12 @@ function App(){
             )
           ):null
 
-        ),
+        ), // 대시보드 끝
 
-        // 우측
+        // 우측 패널
         React.createElement("div",{style:{width:225,flexShrink:0,display:"flex",flexDirection:"column",gap:6,position:"sticky",top:8}},
 
+          // 입력표
           React.createElement("div",{style:{background:P.card,borderRadius:12,padding:"10px",border:"1px solid "+P.border}},
             React.createElement("div",{style:{fontSize:11,fontWeight:700,color:P.muted,marginBottom:6,display:"flex",alignItems:"center",gap:6}},
               "입력 ",React.createElement("span",{style:{fontSize:9,color:P.muted}},"✦ 미입력")),
@@ -427,69 +407,54 @@ function App(){
                 React.createElement(TR,{isHeader:true,label:"지원인력"}),
                 React.createElement(TR,{label:"지원인력",unit:"명",val:sW,onChange:setSW}),
                 React.createElement(TR,{label:"목표 생산성",unit:"건/h",val:sPP,onChange:setSPP}),
-                React.createElement(TR,{label:"달성 생산성",unit:"건/h",ro:true,dv:c.achPP!==null?fmtD(c.achPP)+" 건/h":null}),
-                React.createElement(TR,{isHeader:true,label:"추가 근무 계획"}),
-                React.createElement(TR,{label:"정시/연장",unit:"",ro:true,dv:extMode==='ontime'?"정시퇴근":extMode==='overtime'?"연장근무":"미선택"})
+                React.createElement(TR,{label:"달성 생산성",unit:"건/h",ro:true,dv:c.achPP!==null?fmtD(c.achPP)+" 건/h":null})
               )
             ),
-            React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginTop:6,marginBottom:extMode?6:0}},
-              React.createElement("button",{onClick:function(){setExtMode(extMode==='ontime'?null:'ontime');},
-                style:{...BS,background:extMode==='ontime'?P.inner:P.card,color:extMode==='ontime'?P.text:P.muted,
-                  border:"1px solid "+(extMode==='ontime'?P.text:P.border)}},"정시퇴근"),
-              React.createElement("button",{onClick:function(){setExtMode(extMode==='overtime'?null:'overtime');},
-                style:{...BS,background:extMode==='overtime'?P.inner:P.card,color:extMode==='overtime'?P.text:P.muted,
-                  border:"1px solid "+(extMode==='overtime'?P.text:P.border)}},"연장근무")
+
+            // 정시/연장 버튼
+            React.createElement("div",{style:{marginTop:8,marginBottom:6}},
+              React.createElement("div",{style:{fontSize:9,color:P.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}},"추가 근무 계획"),
+              React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}},
+                React.createElement("button",{onClick:function(){setExtMode(extMode==='ontime'?null:'ontime');},
+                  style:{...BS,background:extMode==='ontime'?P.inner:P.card,color:extMode==='ontime'?P.text:P.muted,
+                    border:"1px solid "+(extMode==='ontime'?P.text:P.border)}},"정시퇴근"),
+                React.createElement("button",{onClick:function(){setExtMode(extMode==='overtime'?null:'overtime');},
+                  style:{...BS,background:extMode==='overtime'?P.inner:P.card,color:extMode==='overtime'?P.text:P.muted,
+                    border:"1px solid "+(extMode==='overtime'?P.text:P.border)}},"연장근무")
+              )
             ),
-            extMode?React.createElement("div",{style:{marginTop:6}},
-              // 생산+간접 섹션 — 2열 그리드로 압축
-              React.createElement("div",{style:{fontSize:9,color:P.muted,fontWeight:700,
-                textTransform:"uppercase",letterSpacing:0.5,marginBottom:4,marginTop:2}},
-                extMode==='overtime'?"연장근무":"정시퇴근"),
-              React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,marginBottom:4}},
-                [{label:"생산+간접",unit:"명",val:ePW,fn:setEPW},
-                 {label:"근무시간",unit:"h",val:eH,fn:setEH},
-                 {label:"목표생산성",unit:"건/h",val:ePP,fn:setEPP},
-                 {label:"연장참여인원",unit:"명",val:extWorkers,fn:setExtWorkers},
-                ].map(function(item){
-                  return React.createElement("div",{key:item.label},
-                    React.createElement("div",{style:{fontSize:9,color:P.muted,fontWeight:700,marginBottom:2}},
-                      item.label+" ("+item.unit+")"),
-                    React.createElement("input",{type:"number",value:item.val,
-                      onChange:function(e){item.fn(e.target.value);},
-                      className:(item.val===""||item.val==null)?"empty":"",
-                      style:iStyle(item.val)})
-                  );
-                })
+
+            // 추가근무 입력 (선택 시)
+            extMode?React.createElement("div",null,
+              // 생산인력 섹션
+              React.createElement("div",{style:{fontSize:9,color:P.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}},
+                extMode==='overtime'?"연장근무 — 생산+간접":"정시퇴근 — 생산+간접"),
+              React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:4,marginBottom:4}},
+                React.createElement(SmallInput,{label:"생산인력",unit:"명",val:ePW,onChange:setEPW}),
+                React.createElement(SmallInput,{label:"간접인력",unit:"명",val:eIW,onChange:setEIW}),
+                React.createElement(SmallInput,{label:"근무시간",unit:"h",val:eH,onChange:setEH})
+              ),
+              React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,marginBottom:6}},
+                React.createElement(SmallInput,{label:"목표생산성",unit:"건/h",val:ePP,onChange:setEPP}),
+                extMode==='overtime'?React.createElement(SmallInput,{label:"연장참여인원",unit:"명",val:extWorkers,onChange:setExtWorkers}):null
               ),
               // 연장시간 표시
               extMode==='overtime'&&c.overtimeH>0?React.createElement("div",{style:{
                 fontSize:11,fontWeight:900,color:"#fbbf24",textAlign:"right",marginBottom:6}},
                 "연장시간: "+c.overtimeH+"h"):null,
               // 지원인력 섹션
-              React.createElement("div",{style:{fontSize:9,color:P.muted,fontWeight:700,
-                textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}},"지원인력 (정시)"),
+              React.createElement("div",{style:{fontSize:9,color:P.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}},"지원인력 (정시)"),
               React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:4}},
-                [{label:"인원",unit:"명",val:extSW,fn:setExtSW},
-                 {label:"시간",unit:"h",val:extSH,fn:setExtSH},
-                 {label:"생산성",unit:"건/h",val:extSPP,fn:setExtSPP},
-                ].map(function(item){
-                  return React.createElement("div",{key:item.label},
-                    React.createElement("div",{style:{fontSize:9,color:P.muted,fontWeight:700,marginBottom:2}},
-                      item.label+" ("+item.unit+")"),
-                    React.createElement("input",{type:"number",value:item.val,
-                      onChange:function(e){item.fn(e.target.value);},
-                      className:(item.val===""||item.val==null)?"empty":"",
-                      style:iStyle(item.val)})
-                  );
-                })
+                React.createElement(SmallInput,{label:"인원",unit:"명",val:extSW,onChange:setExtSW}),
+                React.createElement(SmallInput,{label:"시간",unit:"h",val:extSH,onChange:setExtSH}),
+                React.createElement(SmallInput,{label:"생산성",unit:"건/h",val:extSPP,onChange:setExtSPP})
               ),
-              // 지원인력 예측
-              c.extSupportPred>0?React.createElement("div",{style:{
-                fontSize:11,fontWeight:900,color:P.muted,textAlign:"right",marginTop:4}},
+              c.extSupportPred>0?React.createElement("div",{style:{fontSize:11,fontWeight:900,color:P.muted,textAlign:"right",marginTop:4}},
                 "지원 예측: "+fmt(c.extSupportPred)+" 건"):null
             ):null
           ),
 
+          // 저장 버튼
           React.createElement("button",{onClick:saveRecord,
             style:{width:"100%",padding:"10px",fontSize:14,fontWeight:900,cursor:"pointer",
               borderRadius:10,border:"2px solid "+saveBtnColor,
@@ -498,6 +463,7 @@ function App(){
             saveBtnLabel
           ),
 
+          // 스프레드시트 버튼
           React.createElement("a",{
             href:"https://docs.google.com/spreadsheets/d/1uxV8rg0jl4WjFKWz58R6dOTppDwg_EsECLBHQtG2jkw/edit?usp=sharing",
             target:"_blank",
@@ -507,6 +473,7 @@ function App(){
             "📊 실적 스프레드시트 열기"
           ),
 
+          // 그래프 버튼
           React.createElement("button",{onClick:function(){setShowGraph(!showGraph);},
             style:{width:"100%",padding:"8px",fontSize:12,fontWeight:700,cursor:"pointer",
               borderRadius:10,border:"1px solid "+P.border,background:P.card,color:P.muted}},
@@ -514,7 +481,7 @@ function App(){
             (history.length>0?" ("+history.length+"일)":"")
           )
 
-        )
+        ) // 우측 끝
       )
     )
   );
